@@ -8,6 +8,9 @@
 
 namespace Shencongcong\Jwt;
 
+use Shencongcong\Jwt\Exceptions\PayloadException;
+use Shencongcong\Jwt\Exceptions\TokenExpiredException;
+
 class Jwt
 {
 
@@ -66,11 +69,14 @@ class Jwt
         }
     }
 
-
     /**
-     * 验证token是否有效,默认验证exp,nbf,iat时间
-     * @param string $Token 需要验证的token
-     * @return bool|string
+     * @param string $Token
+     *
+     * @author danielshen
+     * @datetime   2019-08-01 15:19
+     * @return bool|mixed
+     * @throws \Shencongcong\Jwt\Exceptions\PayloadException
+     * @throws \Shencongcong\Jwt\Exceptions\TokenExpiredException
      */
     public function verifyToken(string $Token)
     {
@@ -91,23 +97,18 @@ class Jwt
 
         $payload = json_decode($this->base64UrlDecode($base64payload), JSON_OBJECT_AS_ARRAY);
 
-        //签发时间大于当前服务器时间验证失败
-        if (isset($payload['iat']) && $payload['iat'] > time())
-            return false;
+        //签发时间大于当前服务器时间验证失败   该nbf时间之前不接收处理该Token
+        if (isset($payload['iat']) && $payload['iat'] > time() || isset($payload['nbf']) && $payload['nbf'] > time()){
+            throw new PayloadException('jwt playLoad exception');
+        }
 
         //过期时间小宇当前服务器时间验证失败
-        if (isset($payload['exp']) && $payload['exp'] < time())
-            return false;
-
-        //该nbf时间之前不接收处理该Token
-        if (isset($payload['nbf']) && $payload['nbf'] > time())
-            return false;
+        if (isset($payload['exp']) && $payload['exp'] < time()){
+            throw  new TokenExpiredException('token expired');
+        }
 
         return $payload;
     }
-
-
-
 
     /**
      * base64UrlEncode   https://jwt.io/  中base64UrlEncode编码实现
